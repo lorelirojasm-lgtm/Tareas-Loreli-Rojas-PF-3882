@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  medicos:
+    build: ./medicos
+    container_name: medicos_service
+    ports:
+      - "9090:9090"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - medicity_network
+
+  citas:
+    build: ./citas
+    container_name: citas_service
+    ports:
+      - "5001:5001"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+    networks:
+      - medicity_network
+    depends_on:
+      - medicos
+
+  notificaciones:
+    build: ./notificaciones
+    container_name: notificaciones_service
+    ports:
+      - "5002:5002"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_APP=main.py
+      - FLASK_ENV=development
+    networks:
+      - medicity_network
+    depends_on:
+      - citas
+
+networks:
+  medicity_network:
+    driver: bridge

@@ -1,0 +1,5 @@
+flask==3.0.0
+strawberry-graphql==0.229.0
+flasgger==0.9.7.1
+python-dotenv==1.0.0
+requests==2.31.0
