@@ -3,6 +3,17 @@ import strawberry
 from strawberry.flask.views import GraphQLView
 from typing import Optional
 import logging
+import os
+import requests
+from datetime import datetime, timezone
+
+
+class CitaError(Exception):
+    """Errores de negocio del servicio de Citas."""
+
+# URLs de los servicios dependientes (resolución por DNS interno de Docker Compose)
+MEDICOS_URL = os.getenv("MEDICOS_URL", "http://medicos:9090")
+NOTIFICACIONES_URL = os.getenv("NOTIFICACIONES_URL", "http://notificaciones:5002")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -103,7 +114,95 @@ class Query:
             estado=c["estado"]
         ) for c in resultado]
 
-schema = strawberry.Schema(query=Query)
+@strawberry.type
+class Mutation:
+    @strawberry.mutation
+    def crear_cita(
+        self,
+        medico_id: int,
+        paciente: str,
+        fecha: str,
+        hora: str,
+    ) -> Cita:
+        """Crea una nueva cita validando contra el servicio de Médicos
+        y notificando al servicio de Notificaciones (comunicación entre servicios)."""
+
+        # 1) Validar médico contra el servicio de Médicos (REST/FastAPI)
+        try:
+            resp = requests.get(f"{MEDICOS_URL}/medicos/{medico_id}", timeout=5)
+        except requests.RequestException as exc:
+            app.logger.error("Error contactando servicio Médicos: %s", exc)
+            raise CitaError("Servicio de Médicos no disponible") from exc
+
+        if resp.status_code != 200:
+            app.logger.warning("Médico %d no encontrado (status=%s)", medico_id, resp.status_code)
+            raise CitaError(f"Médico {medico_id} no existe")
+
+        medico = resp.json()
+        if not medico.get("disponible", False):
+            raise CitaError(f"Médico {medico_id} no está disponible")
+
+        # 2) Persistir la cita en memoria
+        nueva_id = max((c["id"] for c in citas_data), default=0) + 1
+        nueva_cita = {
+            "id": nueva_id,
+            "medico_id": medico_id,
+            "paciente": paciente,
+            "fecha": fecha,
+            "hora": hora,
+            "estado": "confirmada",
+        }
+        citas_data.append(nueva_cita)
+        app.logger.info("Cita %d creada para paciente %s con médico %d", nueva_id, paciente, medico_id)
+
+        # 3) Notificar al servicio de Notificaciones (REST/Flask)
+        try:
+            requests.post(
+                f"{NOTIFICACIONES_URL}/notificaciones",
+                json={
+                    "cita_id": nueva_id,
+                    "paciente": paciente,
+                    "tipo": "confirmacion",
+                    "mensaje": f"Tu cita ha sido confirmada para el {fecha} a las {hora} con {medico.get('nombre', 'el médico')}",
+                    "enviado": True,
+                    "fecha_envio": datetime.now(timezone.utc).isoformat(),
+                },
+                timeout=5,
+            )
+            app.logger.info("Notificación enviada para cita %d", nueva_id)
+        except requests.RequestException as exc:
+            # No abortamos la cita si Notificaciones falla; sólo lo registramos.
+            app.logger.error("Error notificando creación de cita %d: %s", nueva_id, exc)
+
+        return Cita(**nueva_cita)
+
+    @strawberry.mutation
+    def cancelar_cita(self, cita_id: int) -> Optional[Cita]:
+        """Cancela una cita existente y notifica al servicio de Notificaciones."""
+        for c in citas_data:
+            if c["id"] == cita_id:
+                c["estado"] = "cancelada"
+                app.logger.info("Cita %d cancelada", cita_id)
+                try:
+                    requests.post(
+                        f"{NOTIFICACIONES_URL}/notificaciones",
+                        json={
+                            "cita_id": cita_id,
+                            "paciente": c["paciente"],
+                            "tipo": "cancelacion",
+                            "mensaje": f"Tu cita del {c['fecha']} a las {c['hora']} ha sido cancelada",
+                            "enviado": True,
+                            "fecha_envio": datetime.now(timezone.utc).isoformat(),
+                        },
+                        timeout=5,
+                    )
+                except requests.RequestException as exc:
+                    app.logger.error("Error notificando cancelación de cita %d: %s", cita_id, exc)
+                return Cita(**c)
+        return None
+
+
+schema = strawberry.Schema(query=Query, mutation=Mutation)
 
 app.add_url_rule(
     "/graphql",

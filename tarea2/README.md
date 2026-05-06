@@ -43,6 +43,34 @@ flowchart TD
 3. **Citas** → **Notificaciones**: Publica evento de cita creada
 4. **Notificaciones**: Envía confirmación y recordatorios
 
+## Comunicación entre servicios (HTTP)
+
+La mutación `crearCita` del servicio **Citas** demuestra la comunicación con los otros dos servicios:
+
+1. `Citas` → `GET http://medicos:9090/medicos/{id}` para validar que el médico existe y está disponible.
+2. `Citas` → `POST http://notificaciones:5002/notificaciones` para registrar la confirmación.
+
+Las URLs se inyectan vía variables de entorno (`MEDICOS_URL`, `NOTIFICACIONES_URL`) en `docker-compose.yml` y se resuelven por el DNS interno de Docker Compose.
+
+### Ejemplo de prueba (GraphQL en `http://localhost:5001/graphql`)
+
+```graphql
+mutation {
+  crearCita(
+    medicoId: 1
+    paciente: "Loreli Rojas"
+    fecha: "2026-05-10"
+    hora: "11:00"
+  ) {
+    id
+    paciente
+    estado
+  }
+}
+```
+
+Tras ejecutarla, consulta `http://localhost:5002/notificaciones` y verás la notificación de confirmación generada automáticamente por el servicio de Citas.
+
 ## Contextos delimitados
 
 Consulta la documentación en Tarea 1 para más detalles:

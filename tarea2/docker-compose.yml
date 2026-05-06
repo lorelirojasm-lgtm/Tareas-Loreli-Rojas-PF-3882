@@ -20,10 +20,13 @@ services:
       - PYTHONUNBUFFERED=1
       - FLASK_APP=app.py
       - FLASK_ENV=development
+      - MEDICOS_URL=http://medicos:9090
+      - NOTIFICACIONES_URL=http://notificaciones:5002
     networks:
       - medicity_network
     depends_on:
       - medicos
+      - notificaciones
 
   notificaciones:
     build: ./notificaciones
@@ -36,8 +39,6 @@ services:
       - FLASK_ENV=development
     networks:
       - medicity_network
-    depends_on:
-      - citas
 
 networks:
   medicity_network:
