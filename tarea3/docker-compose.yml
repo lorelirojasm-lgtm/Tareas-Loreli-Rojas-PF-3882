@@ -1,0 +1,70 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672" # AMQP (mensajería)
+      - "15672:15672" # Management UI (http://localhost:15672 - guest/guest)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - medicity_network
+
+  medicos:
+    build: ./medicos
+    container_name: medicos_service
+    ports:
+      - "9090:9090"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - medicity_network
+
+  citas:
+    build: ./citas
+    container_name: citas_service
+    ports:
+      - "5001:5001"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+      - MEDICOS_URL=http://medicos:9090
+      - RABBITMQ_HOST=rabbitmq
+      - NOTIFICACIONES_QUEUE=cola-notificaciones
+    networks:
+      - medicity_network
+    depends_on:
+      medicos:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  notificaciones:
+    build: ./notificaciones
+    container_name: notificaciones_service
+    ports:
+      - "5002:5002"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_APP=main.py
+      - FLASK_ENV=development
+      - RABBITMQ_HOST=rabbitmq
+      - NOTIFICACIONES_QUEUE=cola-notificaciones
+    networks:
+      - medicity_network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+networks:
+  medicity_network:
+    driver: bridge
