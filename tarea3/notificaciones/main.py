@@ -1,11 +1,14 @@
 from flask import Flask, jsonify, request
 from flasgger import Swagger
+from dotenv import load_dotenv
 import json
 import logging
 import os
 import threading
 import time
 import pika
+
+load_dotenv("config.env")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -215,4 +218,4 @@ _consumer_thread.start()
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5002, debug=True)
+    app.run(host="0.0.0.0", port=5002, debug=False)

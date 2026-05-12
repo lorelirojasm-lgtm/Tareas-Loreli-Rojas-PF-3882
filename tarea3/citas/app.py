@@ -7,7 +7,10 @@ import logging
 import os
 import requests
 import pika
+from dotenv import load_dotenv
 from datetime import datetime, timezone
+
+load_dotenv("config.env")
 
 
 class CitaError(Exception):

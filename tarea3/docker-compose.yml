@@ -1,14 +1,16 @@
 services:
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:management
+    user: "0:0"
+    command: sh -c "chown -R rabbitmq:rabbitmq /var/lib/rabbitmq && rabbitmq-server"
     container_name: rabbitmq
-    hostname: rabbitmq
     ports:
-      - "5672:5672" # AMQP (mensajería)
-      - "15672:15672" # Management UI (http://localhost:15672 - guest/guest)
+      - "5672:5672" # RabbitMQ messaging
+      - "15672:15672" # RabbitMQ management UI
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+    hostname: rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
