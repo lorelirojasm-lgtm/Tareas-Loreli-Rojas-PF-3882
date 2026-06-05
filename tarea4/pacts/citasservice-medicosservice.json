@@ -1,0 +1,143 @@
+{
+  "consumer": {
+    "name": "CitasService"
+  },
+  "provider": {
+    "name": "MedicosService"
+  },
+  "interactions": [
+    {
+      "description": "GET /medicos retorna lista de medicos",
+      "providerState": "existen medicos registrados",
+      "request": {
+        "method": "GET",
+        "path": "/medicos"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+        },
+        "body": [
+          {
+            "id": 1,
+            "nombre": "Dr. Juan García",
+            "especialidad": "Cardiología",
+            "horario_inicio": "08:00",
+            "horario_fin": "17:00",
+            "disponible": true
+          }
+        ],
+        "matchingRules": {
+          "$.body": {
+            "min": 1
+          },
+          "$.body[*].*": {
+            "match": "type"
+          },
+          "$.body[*].id": {
+            "match": "type"
+          },
+          "$.body[*].nombre": {
+            "match": "type"
+          },
+          "$.body[*].especialidad": {
+            "match": "type"
+          },
+          "$.body[*].horario_inicio": {
+            "match": "type"
+          },
+          "$.body[*].horario_fin": {
+            "match": "type"
+          }
+        }
+      }
+    },
+    {
+      "description": "GET /medicos/1 retorna medico disponible",
+      "providerState": "el medico con id 1 existe y esta disponible",
+      "request": {
+        "method": "GET",
+        "path": "/medicos/1"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+        },
+        "body": {
+          "id": 1,
+          "nombre": "Dr. Juan García",
+          "especialidad": "Cardiología",
+          "horario_inicio": "08:00",
+          "horario_fin": "17:00",
+          "disponible": true
+        },
+        "matchingRules": {
+          "$.body.nombre": {
+            "match": "type"
+          },
+          "$.body.especialidad": {
+            "match": "type"
+          },
+          "$.body.horario_inicio": {
+            "match": "type"
+          },
+          "$.body.horario_fin": {
+            "match": "type"
+          }
+        }
+      }
+    },
+    {
+      "description": "GET /medicos/999 retorna 404",
+      "providerState": "no existe medico con id 999",
+      "request": {
+        "method": "GET",
+        "path": "/medicos/999"
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+        },
+        "body": {
+          "error": "Médico no encontrado"
+        },
+        "matchingRules": {
+          "$.body.error": {
+            "match": "type"
+          }
+        }
+      }
+    },
+    {
+      "description": "GET /especialidades retorna lista de especialidades",
+      "providerState": "existen medicos con especialidades registradas",
+      "request": {
+        "method": "GET",
+        "path": "/especialidades"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+        },
+        "body": {
+          "especialidades": [
+            "Cardiología"
+          ]
+        },
+        "matchingRules": {
+          "$.body.especialidades": {
+            "min": 1
+          },
+          "$.body.especialidades[*].*": {
+            "match": "type"
+          }
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "pactSpecification": {
+      "version": "2.0.0"
+    }
+  }
+}

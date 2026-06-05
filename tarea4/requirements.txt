@@ -1,0 +1,9 @@
+# pact-python <2.0 usa la API Consumer/Provider/Like (compatible con Windows).
+# pact-python >=2.0 usa pact_ffi (Rust DLL) que puede fallar en Windows Store Python.
+pact-python<2.0
+pytest
+requests
+fastapi
+uvicorn
+python-dotenv
+pydantic

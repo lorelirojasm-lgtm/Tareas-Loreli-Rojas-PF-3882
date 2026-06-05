@@ -1,0 +1,40 @@
+services:
+
+  # Servicio proveedor: API REST de Médicos (tarea3)
+  medicos:
+    build:
+      context: ../tarea3/medicos
+    container_name: medicos_pact
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9090/')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - pact_net
+
+  # Ejecutor de pruebas Pact
+  pact-tests:
+    build:
+      context: .
+    container_name: pact_tests
+    environment:
+      # En Docker, el proveedor corre como servicio separado.
+      # La variable MEDICOS_URL indica al verificador dónde conectarse.
+      - MEDICOS_URL=http://medicos:9090
+    depends_on:
+      medicos:
+        condition: service_healthy
+    volumes:
+      # Monta la carpeta pacts/ del host para que los contratos
+      # generados sean accesibles fuera del contenedor.
+      - ./pacts:/workspace/pacts
+    networks:
+      - pact_net
+
+networks:
+  pact_net:
+    driver: bridge
